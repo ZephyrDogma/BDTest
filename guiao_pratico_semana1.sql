@@ -1,55 +1,82 @@
--- Primeiro criamos tabelas que não têm referencia para ninguem
-CREATE TABLE departamento (
-    id_departamento INT PRIMARY KEY,
-    nome            VARCHAR(50) NOT NULL UNIQUE,
-    localizacao     VARCHAR(100) NOT NULL
+-- ============================================================
+-- GUIÃO DE AULA PRÁTICA - SEMANA 1: BASES DE DADOS
+-- Exemplo dos Slides: CLIENTE e ENCOMENDA
+-- ============================================================
+
+-- 1. Limpeza inicial para poder reexecutar o script
+DROP TABLE IF EXISTS encomenda CASCADE;
+DROP TABLE IF EXISTS cliente CASCADE;
+
+
+-- Primeiro criamos tabelas que não têm referência para ninguém
+CREATE TABLE cliente (
+    id_cliente INT PRIMARY KEY,
+    nome       VARCHAR(100) NOT NULL,
+    email      VARCHAR(100) NOT NULL UNIQUE
 );
 
+
 -- Depois criamos as tabelas que referenciam outras acima
-CREATE TABLE empregado (
-    id_empregado    INT PRIMARY KEY,
-    nome            VARCHAR(100) NOT NULL,
-    email           VARCHAR(100) NOT NULL UNIQUE,
-    salario         NUMERIC(10, 2) NOT NULL CHECK (salario > 0),
-    data_admissao   DATE NOT NULL DEFAULT CURRENT_DATE,
-    id_departamento INT NOT NULL,
-    CONSTRAINT fk_empregado_departamento 
-        FOREIGN KEY (id_departamento) 
-        REFERENCES departamento(id_departamento)
+CREATE TABLE encomenda (
+    id_encomenda INT PRIMARY KEY,
+    data         DATE NOT NULL DEFAULT CURRENT_DATE,
+    valor        NUMERIC(10, 2) NOT NULL CHECK (valor > 0),
+    id_cliente   INT NOT NULL,
+    CONSTRAINT fk_encomenda_cliente 
+        FOREIGN KEY (id_cliente) 
+        REFERENCES cliente(id_cliente)
         ON DELETE RESTRICT 
         ON UPDATE CASCADE
 );
 
--- Resumindo não podemos referenciar algo que não existe
+-- Resumindo: não podemos referenciar algo que não existe
 
 
+-- Primeiro inserimos os Clientes (Tabela que é referenciada por outras)
+INSERT INTO cliente (id_cliente, nome, email) VALUES
+    (1, 'Ana Silva', 'ana.silva@email.com'),
+    (2, 'Bruno Santos', 'bruno.santos@email.com'),
+    (3, 'Carla Oliveira', 'carla.oliveira@email.com');
 
--- Primeiro inserimos os Departamentos (Tabela que é referenciada por outras)
-INSERT INTO departamento (id_departamento, nome, localizacao) VALUES
-    (1,'Recursos Humanos', 'Edifício A - Piso 1'),
-    (2,'Tecnologias de Informação', 'Edifício B - Piso 2'),
-    (3,'Financeiro', 'Edifício A - Piso 3');
 
--- Depois inserimos os Empregados associados aos Departamentos (Tabela que refere alguem já criado acima)
-INSERT INTO empregado (id_empregado, nome, email, salario, id_departamento) VALUES
-    (1, 'Ana Silva', 'ana.silva@empresa.com', 1500.00, 2),
-    (2, 'Bruno Santos', 'bruno.santos@empresa.com', 1800.50, 2),
-    (3, 'Carla Oliveira', 'carla.oliveira@empresa.com', 1350.00, 1),
-    (4, 'Diogo Costa', 'diogo.costa@empresa.com', 1600.00, 3);
+-- Depois inserimos as Encomendas associadas aos Clientes (Tabela que refere alguém já criado acima)
+INSERT INTO encomenda (id_encomenda, data, valor, id_cliente) VALUES
+    (101, '2026-09-20', 150.00, 1),
+    (102, '2026-09-21', 89.90, 1),
+    (103, '2026-09-22', 210.50, 3);
+-- Nota: O cliente 2 (Bruno Santos) fica sem encomendas para poderem testar esse caso em aula!
 
-select * from departamento;
 
-select nome from departamento
+-- Consultas simples
+SELECT * FROM cliente;
 
-select e.id_empregado, e.nome AS empregado, e.email, e.salario, d.nome AS departamento, d.localizacao
-FROM empregado e
-JOIN departamento d ON e.id_departamento = d.id_departamento;
+SELECT nome FROM cliente;
 
--- 1. Erro de integridade
-INSERT INTO empregado (id_empregado, nome, email, salario, id_departamento) VALUES (10, 'Teste FK', 'erro.fk@empresa.com', 1000.00, 99);
 
--- 2. Erro de integridade
-INSERT INTO empregado (id_empregado, nome, email, salario, id_departamento) VALUES (20, 'Outro Nome', 'ana.silva@empresa.com', 1200.00, 1);
+-- Junção (JOIN) para ver as encomendas com os dados do cliente
+SELECT 
+    e.id_encomenda, 
+    e.data, 
+    e.valor, 
+    c.id_cliente, 
+    c.nome AS cliente, 
+    c.email
+FROM encomenda e
+JOIN cliente c ON e.id_cliente = c.id_cliente;
 
--- 3. erro de integridade
-INSERT INTO empregado (id_empregado, nome, email, salario, id_departamento) VALUES (30, 'Erro Salario', 'erro.salario@empresa.com', -500.00, 1);
+
+-- ============================================================
+-- ERROS DE INTEGRIDADE PARA DEMONSTRAR NA AULA
+-- ============================================================
+
+-- 1. Erro de integridade referencial (Cliente 99 não existe na tabela cliente)
+INSERT INTO encomenda (id_encomenda, data, valor, id_cliente) 
+VALUES (104, '2026-09-22', 50.00, 99);
+
+-- 2. Erro de integridade de unicidade (Email da Ana Silva já existe)
+INSERT INTO cliente (id_cliente, nome, email) 
+VALUES (4, 'Ana Rita', 'ana.silva@email.com');
+
+-- 3. Erro de integridade por restrição CHECK (Valor da encomenda negativo)
+INSERT INTO encomenda (id_encomenda, data, valor, id_cliente) 
+VALUES (105, '2026-09-22', -20.00, 1);
